@@ -18,12 +18,16 @@ impl GameState for TicTacToe {
     }
 
     fn get_moves(&self) -> Vec<Self::Move> {
-        (0..3)
-            .map(|x| (0..3)
-                .filter(move |y| self.board[x][*y].is_none())
-                .map(move |y| (x, y)))
-            .flatten()
-            .collect()
+        if self.eval_score() == 0 {
+            (0..3)
+                .map(|x| (0..3)
+                    .filter(move |y| self.board[x][*y].is_none())
+                    .map(move |y| (x, y)))
+                .flatten()
+                .collect()
+        } else {
+            Vec::new()
+        }
     }
 
     fn eval_score(&self) -> i32 {
@@ -61,8 +65,8 @@ impl fmt::Display for TicTacToe {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         fn p2c(player: Option<Player>) -> char {
             match player {
-                Some(Player::Agent) => 'x',
-                Some(Player::Opponent) => 'o',
+                Some(Player::One) => 'x',
+                Some(Player::Two) => 'o',
                 None => ' ',
             }
         }
@@ -79,12 +83,22 @@ impl fmt::Display for TicTacToe {
 fn main() {
     let mut board = TicTacToe {
         board: [[None; 3]; 3],
-        next_player: Player::Agent,
+        next_player: Player::One,
     };
 
-    while let Some(mov) = board.solve_depth(10) {
-        println!("{}", board);
-        board.apply_move(mov);
+    loop {
+        if let Some(mov) = board.solve_depth(Player::One, 10) {
+            println!("{}", board);
+            board.apply_move(mov);
+        } else {
+            break;
+        }
+        if let Some(mov) = board.solve_depth(Player::Two, 10) {
+            println!("{}", board);
+            board.apply_move(mov);
+        } else {
+            break;
+        }
     }
 
     println!("{}", board);

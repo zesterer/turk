@@ -2,8 +2,8 @@ use std::ops::Not;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Player {
-    Agent,
-    Opponent,
+    One,
+    Two,
 }
 
 impl Not for Player {
@@ -11,8 +11,8 @@ impl Not for Player {
 
     fn not(self) -> Self::Output {
         match self {
-            Player::Agent => Player::Opponent,
-            Player::Opponent => Player::Agent,
+            Player::One => Player::Two,
+            Player::Two => Player::One,
         }
     }
 }
@@ -25,10 +25,10 @@ pub trait GameState: Clone {
     fn get_moves(&self) -> Vec<Self::Move>;
     fn eval_score(&self) -> i32;
 
-    fn solve_depth(&self, depth: usize) -> Option<Self::Move> {
+    fn solve_depth(&self, player: Player, depth: usize) -> Option<Self::Move> {
         min(
             self,
-            if let Player::Agent = self.next_player() { 1 } else { -1 },
+            if self.next_player() == player { -1 } else { 1 },
             depth,
         ).1
     }
