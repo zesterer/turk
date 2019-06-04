@@ -1,5 +1,5 @@
 use std::fmt;
-use minmax::{Player, GameState};
+use turk::{Player, GameState};
 
 #[derive(Clone)]
 struct TicTacToe {
