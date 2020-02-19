@@ -17,43 +17,56 @@ impl Not for Player {
     }
 }
 
+impl Into<usize> for Player {
+    fn into(self) -> usize {
+        match self {
+            Player::One => 1,
+            Player::Two => 2,
+        }
+    }
+}
+
 pub trait GameState: Clone {
     type Move: Clone;
 
     fn next_player(&self) -> Player;
     fn apply_move(&mut self, mov: Self::Move);
     fn for_each_move<F: FnMut(Self::Move)>(&self, f: F);
-    fn eval_score(&self) -> i32;
+    fn eval_score(&self, player: Player) -> i32;
 
-    fn solve_depth(&self, player: Player, depth: usize) -> Option<Self::Move> {
-        min(
-            self,
-            if self.next_player() == player { -1 } else { 1 },
-            depth,
-        )
-        .1
+    fn can_move(&self) -> bool {
+        let mut can_move = false;
+        self.for_each_move(|_| can_move = true);
+        can_move
+    }
+
+    fn solve(&self, depth: usize) -> Option<Self::Move> {
+        minimax(self, self.next_player(), depth).1
     }
 }
 
-fn min<G: GameState>(game: &G, flip: i32, depth: usize) -> (i32, Option<G::Move>) {
+fn minimax<G: GameState>(game: &G, player: Player, depth: usize) -> (i32, Option<G::Move>) {
     if depth == 0 {
-        (game.eval_score(), None)
+        (game.eval_score(player), None)
     } else {
-        let mut min_mov = None;
+        let mut max_mov = None;
 
+        let min = game.next_player() != player;
         game.for_each_move(|mov| {
-            let mut this = game.clone();
-            this.apply_move(mov.clone());
-            let cost = flip * min(&this, -1, depth - 1).0;
-            if min_mov
+            let mut game = game.clone();
+            game.apply_move(mov.clone());
+            let score = minimax(&game, player, depth - 1).0;
+            if max_mov
                 .as_ref()
-                .map(|(_, c): &(G::Move, i32)| cost > *c)
+                .map(|(s, _)| (score > *s) ^ min)
                 .unwrap_or(true)
             {
-                min_mov = Some((mov, cost));
+                max_mov = Some((score, mov));
             }
         });
 
-        (game.eval_score(), min_mov.map(|(mov, _)| mov))
+        max_mov
+            .map(|(score, mov)| (score, Some(mov)))
+            .unwrap_or_else(|| (game.eval_score(player), None))
     }
 }

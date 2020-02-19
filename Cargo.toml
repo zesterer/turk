@@ -1,11 +1,9 @@
 [package]
 name = "turk"
-version = "0.2.0"
-description = "A generic minmax algorithm that may be used as an AI player for 2-player games"
+version = "0.3.0"
+description = "A generic minimax algorithm that may be used as an AI player for 2-player games"
 authors = ["Joshua Barretto <joshua.s.barretto@gmail.com>"]
 edition = "2018"
 license = "MIT"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]

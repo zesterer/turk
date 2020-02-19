@@ -20,46 +20,44 @@ impl GameState for TicTacToe {
     }
 
     fn for_each_move<F: FnMut(Self::Move)>(&self, f: F) {
-        if self.eval_score() == 0 {
+        if self.eval_score(Player::One) == 0 {
             (0..3)
-                .map(|x| {
-                    (0..3)
-                        .filter(move |y| self.board[x][*y].is_none())
-                        .map(move |y| (x, y))
-                })
+                .map(|x| (0..3).map(move |y| (x, y)))
                 .flatten()
+                .filter(|(x, y)| self.board[*x][*y].is_none())
                 .for_each(f);
         }
     }
 
-    fn eval_score(&self) -> i32 {
-        // Columns
-        for i in 0..3 {
-            match (self.board[i][0], self.board[i][1], self.board[i][2]) {
-                (Some(x), Some(y), Some(z)) if x == y && y == z => return 1,
+    fn eval_score(&self, player: Player) -> i32 {
+        (|| {
+            for i in 0..3 {
+                // Columns
+                match (self.board[i][0], self.board[i][1], self.board[i][2]) {
+                    (Some(x), Some(y), Some(z)) if x == y && y == z => return Some(x),
+                    _ => {}
+                }
+                // Rows
+                match (self.board[0][i], self.board[1][i], self.board[2][i]) {
+                    (Some(x), Some(y), Some(z)) if x == y && y == z => return Some(x),
+                    _ => {}
+                }
+            }
+
+            // Diagonals
+            match (self.board[0][0], self.board[1][1], self.board[2][2]) {
+                (Some(x), Some(y), Some(z)) if x == y && y == z => return Some(x),
                 _ => {}
             }
-        }
-
-        // Rows
-        for i in 0..3 {
-            match (self.board[0][i], self.board[1][i], self.board[2][i]) {
-                (Some(x), Some(y), Some(z)) if x == y && y == z => return 1,
+            match (self.board[2][0], self.board[1][1], self.board[0][2]) {
+                (Some(x), Some(y), Some(z)) if x == y && y == z => return Some(x),
                 _ => {}
             }
-        }
 
-        // Diagonals
-        match (self.board[0][0], self.board[1][1], self.board[2][2]) {
-            (Some(x), Some(y), Some(z)) if x == y && y == z => return 1,
-            _ => {}
-        }
-        match (self.board[2][0], self.board[1][1], self.board[0][2]) {
-            (Some(x), Some(y), Some(z)) if x == y && y == z => return 1,
-            _ => {}
-        }
-
-        0
+            None
+        })()
+        .map(|p| if p == player { 1 } else { -1 })
+        .unwrap_or(0)
     }
 }
 
@@ -74,27 +72,15 @@ impl fmt::Display for TicTacToe {
         }
 
         writeln!(f, ",-----,")?;
-        writeln!(
-            f,
-            "|{} {} {}|",
-            p2c(self.board[0][0]),
-            p2c(self.board[1][0]),
-            p2c(self.board[2][0])
-        )?;
-        writeln!(
-            f,
-            "|{} {} {}|",
-            p2c(self.board[0][1]),
-            p2c(self.board[1][1]),
-            p2c(self.board[2][1])
-        )?;
-        writeln!(
-            f,
-            "|{} {} {}|",
-            p2c(self.board[0][2]),
-            p2c(self.board[1][2]),
-            p2c(self.board[2][2])
-        )?;
+        for i in 0..3 {
+            writeln!(
+                f,
+                "|{} {} {}|",
+                p2c(self.board[0][i]),
+                p2c(self.board[1][i]),
+                p2c(self.board[2][i])
+            )?;
+        }
         writeln!(f, "'-----'")?;
         Ok(())
     }
@@ -107,19 +93,45 @@ fn main() {
     };
 
     loop {
-        if let Some(mov) = board.solve_depth(Player::One, 8) {
-            println!("{}", board);
-            board.apply_move(mov);
-        } else {
+        println!("{}", board);
+
+        if !board.can_move() {
+            let p1 = board.eval_score(Player::One);
+            println!(
+                "You {}!",
+                if p1 > 0 {
+                    "won"
+                } else if p1 < 0 {
+                    "lost"
+                } else {
+                    "drew"
+                }
+            );
             break;
         }
-        if let Some(mov) = board.solve_depth(Player::Two, 8) {
-            println!("{}", board);
-            board.apply_move(mov);
+
+        if board.next_player() == Player::One {
+            let (x, y) = loop {
+                let mut buf = String::new();
+                println!("Enter a location(i.e: 0 1)");
+                std::io::stdin().read_line(&mut buf).unwrap();
+                match buf
+                    .split_whitespace()
+                    .map(|s| s.parse())
+                    .collect::<Result<Vec<_>, _>>()
+                {
+                    Ok(v) if v.len() == 2 => break (v[0], v[1]),
+                    _ => {}
+                }
+            };
+            board.apply_move((x, y));
         } else {
-            break;
+            println!("AI is thinking...");
+            if let Some(mov) = board.solve(8) {
+                board.apply_move(mov);
+            } else {
+                break;
+            }
         }
     }
-
-    println!("{}", board);
 }
